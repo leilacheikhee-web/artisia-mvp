@@ -5,3 +5,8 @@ logs/
 data/outputs/
 .ipynb_checkpoints/
 .streamlit/
+archai_report.json
+archai_report.md
+archai_report.txt
+archai_feedback.json
+archai_data.db
