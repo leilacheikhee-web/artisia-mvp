@@ -1,5 +1,5 @@
 import json
-from utils.ollama_client import call_ollama
+from utils.llm_client import call_llm
 from utils.prompts import SCORING_PROMPT
 
 def run_scoring_agent(memory):
@@ -7,7 +7,7 @@ def run_scoring_agent(memory):
         memory=memory.model_dump_json()
     )
     
-    response = call_ollama(prompt)
+    response = call_llm(prompt)
     if response:
         try:
             scoring_data = json.loads(response)

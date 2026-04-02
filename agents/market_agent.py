@@ -1,18 +1,40 @@
 import json
-from utils.ollama_client import call_ollama
+from utils.llm_client import call_llm
 from utils.prompts import MARKET_PROMPT
 
-def run_market_agent(memory):
+def market_agent(memory):
+    """
+    Artisia Market Agent.
+    Estimates pricing range and target audience based on product and market data.
+    """
+    try:
+        product = memory["product"]
+        market_input = memory["market_input"]
+    except (TypeError, KeyError):
+        product = getattr(memory, "product", {})
+        market_input = getattr(memory, "market_input", {})
+        
     prompt = MARKET_PROMPT.format(
-        product=json.dumps(memory.product),
-        market_input=json.dumps(memory.market_input)
+        product=json.dumps(product),
+        market_input=json.dumps(market_input)
     )
     
-    response = call_ollama(prompt)
-    if response:
-        try:
-            market_data = json.loads(response)
-            memory.add_field("market", market_data)
-        except json.JSONDecodeError:
-            print("Failed to parse market agent output.")
-    return memory
+    response_text = call_llm(prompt)
+    
+    if not response_text:
+        raise Exception("Agent failed: No response from LLM.")
+        
+    try:
+        market_data = json.loads(response_text)
+        
+        # Store in memory
+        if isinstance(memory, dict):
+            memory["market"] = market_data
+        else:
+            memory.market = market_data
+            
+        return market_data
+        
+    except json.JSONDecodeError:
+        print(f"RAW LLM TEXT COULD NOT BE PARSED: {response_text}")
+        raise Exception("Agent failed: LLM output is not valid JSON.")

@@ -1,0 +1,648 @@
+{
+    "goal": "Improve reliability and sprint planning",
+    "tasks": [
+        {
+            "ticket_id": "T001",
+            "title": "Define `AbstractAgent` Interface to Decouple Pipeline Logic",
+            "description": "The current pipeline directly instantiates and calls agent methods, creating tight coupling. This task introduces a formal `AbstractAgent` interface (or Protocol) to define a contract for all agents. This is the first step in breaking the high coupling that impedes sprint planning and centralizes complexity in `agents.pipeline`.",
+            "effort_min": 1.0,
+            "effort_max": 2.0,
+            "priority": "Critical",
+            "type": "Architecture",
+            "severity": "High",
+            "confidence_score": 1.0,
+            "confidence_level": "HIGH",
+            "uncertainty_drivers": [],
+            "tags": [],
+            "module": "agents.base",
+            "evidence": {
+                "file_path": "agents.pipeline",
+                "symbol": "run_pipeline",
+                "line_range": "N/A (Module-level risk)",
+                "call_chain": [],
+                "confidence": 0.9,
+                "responsible_agent": "Work Decomposition Agent",
+                "uncertainty_drivers": []
+            },
+            "risk_flags": [
+                "high-impact",
+                "deep-dep"
+            ],
+            "suggested_fix": "1. Create a new file `agents/base.py`. 2. Define an `AbstractAgent` class or `AgentProtocol` with an abstract method like `execute(input_data: dict) -> dict`. 3. This establishes a stable contract that the pipeline can rely on, regardless of the underlying agent implementation.",
+            "dependencies": [],
+            "subtasks": [],
+            "notes": "Structural risk in `agents.pipeline` due to tight coupling. Mitigated by introducing a stable contract via a new, isolated file (`agents/base.py`), which is a low-risk first step."
+        },
+        {
+            "ticket_id": "T002",
+            "title": "Refactor `utils.ollama_client` into an `LLMProvider` Adapter",
+            "description": "The module `utils.ollama_client` is a critical single point of failure. A bug or breaking change here will cascade to all five agents, crippling the application. This task mitigates this risk by replacing the direct dependency with an abstraction layer, allowing for future extensibility and fault isolation.",
+            "effort_min": 2.0,
+            "effort_max": 4.0,
+            "priority": "Critical",
+            "type": "Architecture",
+            "severity": "High",
+            "confidence_score": 1.0,
+            "confidence_level": "HIGH",
+            "uncertainty_drivers": [],
+            "tags": [],
+            "module": "llm_provider.provider",
+            "evidence": {
+                "file_path": "utils.ollama_client",
+                "symbol": "call_ollama",
+                "line_range": "N/A (Module-level risk)",
+                "call_chain": [],
+                "confidence": 0.95,
+                "responsible_agent": "Work Decomposition Agent",
+                "uncertainty_drivers": []
+            },
+            "risk_flags": [
+                "high-impact",
+                "deep-dep",
+                "refactoring-risk"
+            ],
+            "suggested_fix": "1. Create a new module `llm_provider/`. 2. Define an abstract `LLMProvider` interface with a `generate(prompt: str) -> str` method. 3. Create a concrete `OllamaProvider` implementation that wraps the existing logic from `utils.ollama_client`. 4. Agents will now depend on the `LLMProvider` interface, not the concrete `OllamaProvider`.",
+            "dependencies": [],
+            "subtasks": [],
+            "notes": "Structural risk from a critical single point of failure in `utils.ollama_client`. The proposed fix is a high-impact, 'big bang' refactoring affecting all five agents. This constitutes an irreversible decision; a flawed implementation could cause system-wide failure. The effort (2-4 hours) seems optimistic for the scope, and the plan lacks a specific, dedicated integration testing step for this critical change."
+        },
+        {
+            "ticket_id": "T003",
+            "title": "Move Agent-Specific Logic from `utils.prompts` into Respective Agents",
+            "description": "The `utils.prompts` module is another single point of failure and a source of high coupling. Sharing prompts centrally means any change requires checking all five agents. This task improves maintainability and isolates agent behavior by moving prompt management into the agent modules themselves.",
+            "effort_min": 2.0,
+            "effort_max": 3.0,
+            "priority": "High",
+            "type": "Architecture",
+            "severity": "Medium",
+            "confidence_score": 1.0,
+            "confidence_level": "HIGH",
+            "uncertainty_drivers": [],
+            "tags": [],
+            "module": "agents.*",
+            "evidence": {
+                "file_path": "utils.prompts",
+                "symbol": "module",
+                "line_range": "N/A (Module-level risk)",
+                "call_chain": [],
+                "confidence": 0.95,
+                "responsible_agent": "Work Decomposition Agent",
+                "uncertainty_drivers": []
+            },
+            "risk_flags": [
+                "high-impact",
+                "refactoring-risk"
+            ],
+            "suggested_fix": "1. For each agent (`brand_agent`, `market_agent`, etc.), move its corresponding prompt templates from `utils.prompts` into a private class variable or a dedicated method within the agent class. 2. Remove the `utils.prompts` module. 3. This encapsulates agent-specific logic, reducing cross-agent dependencies.",
+            "dependencies": [],
+            "subtasks": [],
+            "notes": ""
+        },
+        {
+            "ticket_id": "T004",
+            "title": "Update All Agent Implementations to Use New Abstractions",
+            "description": "This is the implementation step to apply the new architecture. Each of the five agents must be updated to inherit from `AbstractAgent` and use the new `LLMProvider` adapter instead of the old `utils` modules. This directly breaks the tight coupling identified in the assessment.",
+            "effort_min": 3.0,
+            "effort_max": 5.0,
+            "priority": "High",
+            "type": "Architecture",
+            "severity": "High",
+            "confidence_score": 1.0,
+            "confidence_level": "HIGH",
+            "uncertainty_drivers": [],
+            "tags": [],
+            "module": "agents.brand_agent, agents.market_agent, agents.listing_agent, agents.translator_agent, agents.scoring_agent",
+            "evidence": {
+                "file_path": "agents.*",
+                "symbol": "module",
+                "line_range": "N/A (Module-level risk)",
+                "call_chain": [],
+                "confidence": 0.9,
+                "responsible_agent": "Work Decomposition Agent",
+                "uncertainty_drivers": []
+            },
+            "risk_flags": [
+                "high-impact",
+                "refactoring-risk"
+            ],
+            "suggested_fix": "1. Update each agent class (`BrandAgent`, `MarketAgent`, etc.) to inherit from `AbstractAgent`. 2. Modify each agent's constructor to accept an `LLMProvider` instance (Dependency Injection). 3. Refactor the agent's core logic to use `provider.generate()` and its own local prompt templates. 4. Implement the required `execute()` method from the interface.",
+            "dependencies": [
+                "T001",
+                "T002",
+                "T003"
+            ],
+            "subtasks": [],
+            "notes": ""
+        },
+        {
+            "ticket_id": "T005",
+            "title": "Refactor `agents.pipeline` to Manage Abstracted Agents",
+            "description": "The `agents.pipeline` module orchestrates the execution. It must be updated to work with the new, decoupled agent architecture. This finalizes the refactoring and completes the mitigation of the primary coupling and single-point-of-failure risks.",
+            "effort_min": 2.0,
+            "effort_max": 3.0,
+            "priority": "High",
+            "type": "Architecture",
+            "severity": "Medium",
+            "confidence_score": 1.0,
+            "confidence_level": "HIGH",
+            "uncertainty_drivers": [],
+            "tags": [],
+            "module": "agents.pipeline",
+            "evidence": {
+                "file_path": "agents.pipeline",
+                "symbol": "run_pipeline",
+                "line_range": "N/A (Module-level risk)",
+                "call_chain": [],
+                "confidence": 0.9,
+                "responsible_agent": "Work Decomposition Agent",
+                "uncertainty_drivers": []
+            },
+            "risk_flags": [
+                "refactoring-risk"
+            ],
+            "suggested_fix": "1. Modify the `run_pipeline` function to instantiate agents using the new constructors, providing them with the `OllamaProvider`. 2. Update the pipeline logic to call the standardized `execute()` method on each agent. 3. Ensure data is passed correctly between agents according to the `execute` contract.",
+            "dependencies": [
+                "T001",
+                "T004"
+            ],
+            "subtasks": [],
+            "notes": ""
+        },
+        {
+            "ticket_id": "T006",
+            "title": "Set Up `pytest` Framework and Configure Test Environment",
+            "description": "The complete absence of tests is a latent risk undermining reliability and sprint planning. This foundational task establishes a testing framework (`pytest`) and configures the environment, enabling all subsequent quality assurance efforts. This is a prerequisite for creating a safety net.",
+            "effort_min": 1.0,
+            "effort_max": 2.0,
+            "priority": "Critical",
+            "type": "Logic",
+            "severity": "Medium",
+            "confidence_score": 1.0,
+            "confidence_level": "HIGH",
+            "uncertainty_drivers": [],
+            "tags": [],
+            "module": "tests",
+            "evidence": {
+                "file_path": "Project Scope",
+                "symbol": "Tests & Documentation",
+                "line_range": "N/A (Absence-based risk)",
+                "call_chain": [],
+                "confidence": 0.99,
+                "responsible_agent": "Work Decomposition Agent",
+                "uncertainty_drivers": []
+            },
+            "risk_flags": [
+                "foundational"
+            ],
+            "suggested_fix": "1. Add `pytest` and `pytest-mock` to the project's dependencies. 2. Create a `tests/` directory at the project root. 3. Add a basic `conftest.py` file with common fixtures, such as a mock `LLMProvider`. 4. Configure a CI pipeline step (if applicable) to run tests.",
+            "dependencies": [],
+            "subtasks": [],
+            "notes": "Foundational risk from the complete absence of a test suite. The proposed task is a low-risk, high-impact action to create a safety net for all subsequent development."
+        },
+        {
+            "ticket_id": "T007",
+            "title": "Write Unit Tests for the `LLMProvider` Abstraction",
+            "description": "The new `LLMProvider` is a critical component replacing a single point of failure. It must be thoroughly unit tested to ensure its adapter logic is correct and reliable. This builds confidence in the new architecture and provides a safety net for future changes.",
+            "effort_min": 2.0,
+            "effort_max": 4.0,
+            "priority": "High",
+            "type": "Logic",
+            "severity": "High",
+            "confidence_score": 1.0,
+            "confidence_level": "HIGH",
+            "uncertainty_drivers": [],
+            "tags": [],
+            "module": "tests.test_llm_provider",
+            "evidence": {
+                "file_path": "llm_provider.provider",
+                "symbol": "OllamaProvider",
+                "line_range": "N/A (New Module)",
+                "call_chain": [],
+                "confidence": 0.95,
+                "responsible_agent": "Work Decomposition Agent",
+                "uncertainty_drivers": []
+            },
+            "risk_flags": [
+                "high-impact"
+            ],
+            "suggested_fix": "1. Create `tests/test_llm_provider.py`. 2. Write tests for the `OllamaProvider` implementation. 3. Use mocking to simulate calls to the external Ollama service and verify correct request formatting and response handling. 4. Test error handling and edge cases.",
+            "dependencies": [
+                "T002",
+                "T006"
+            ],
+            "subtasks": [],
+            "notes": ""
+        },
+        {
+            "ticket_id": "T008",
+            "title": "Write Unit Tests for Each Decoupled Agent",
+            "description": "Now that agents are decoupled, they can be unit tested in isolation. This is crucial for the goal of improving sprint planning, as it allows developers to safely modify a single agent with confidence that it will not break others. This directly mitigates the regression risk.",
+            "effort_min": 3.0,
+            "effort_max": 5.0,
+            "priority": "High",
+            "type": "Logic",
+            "severity": "High",
+            "confidence_score": 1.0,
+            "confidence_level": "HIGH",
+            "uncertainty_drivers": [],
+            "tags": [],
+            "module": "tests.test_agents",
+            "evidence": {
+                "file_path": "agents.*",
+                "symbol": "Agent Class",
+                "line_range": "N/A (Post-refactoring)",
+                "call_chain": [],
+                "confidence": 0.9,
+                "responsible_agent": "Work Decomposition Agent",
+                "uncertainty_drivers": []
+            },
+            "risk_flags": [
+                "high-impact"
+            ],
+            "suggested_fix": "1. For each of the five agents, create a corresponding test file (e.g., `tests/test_brand_agent.py`). 2. In each test, instantiate the agent with a mocked `LLMProvider`. 3. Test the agent's `execute` method by providing sample inputs and asserting that the correct prompt is generated and passed to the provider. 4. Verify the output formatting.",
+            "dependencies": [
+                "T004",
+                "T006"
+            ],
+            "subtasks": [],
+            "notes": ""
+        },
+        {
+            "ticket_id": "T009",
+            "title": "Write Integration Tests for the `agents.pipeline`",
+            "description": "While unit tests validate components in isolation, integration tests are needed to verify that the refactored pipeline works correctly end-to-end. This ensures the handoff between agents and the overall workflow remains functional after the major architectural changes.",
+            "effort_min": 2.0,
+            "effort_max": 3.0,
+            "priority": "Medium",
+            "type": "Logic",
+            "severity": "Medium",
+            "confidence_score": 1.0,
+            "confidence_level": "HIGH",
+            "uncertainty_drivers": [],
+            "tags": [],
+            "module": "tests.test_pipeline_integration",
+            "evidence": {
+                "file_path": "agents.pipeline",
+                "symbol": "run_pipeline",
+                "line_range": "N/A (Post-refactoring)",
+                "call_chain": [],
+                "confidence": 0.9,
+                "responsible_agent": "Work Decomposition Agent",
+                "uncertainty_drivers": []
+            },
+            "risk_flags": [],
+            "suggested_fix": "1. Create `tests/test_pipeline_integration.py`. 2. Write a test that initializes the full `agents.pipeline` with a mocked `LLMProvider`. 3. Provide a sample initial input and run the pipeline. 4. Assert that each agent's `execute` method was called in the correct order with the expected data.",
+            "dependencies": [
+                "T005",
+                "T007",
+                "T008"
+            ],
+            "subtasks": [],
+            "notes": ""
+        },
+        {
+            "ticket_id": "T010",
+            "title": "Document the New Agent-Based Architecture",
+            "description": "The refactoring introduces a new architectural pattern that is not yet documented. This absence creates knowledge debt and hampers future onboarding and sprint planning. This task captures the new design decisions to guide future development.",
+            "effort_min": 1.0,
+            "effort_max": 2.0,
+            "priority": "Medium",
+            "type": "Architecture",
+            "severity": "Low",
+            "confidence_score": 1.0,
+            "confidence_level": "HIGH",
+            "uncertainty_drivers": [],
+            "tags": [],
+            "module": "ARCHITECTURE.md",
+            "evidence": {
+                "file_path": "Project Scope",
+                "symbol": "Tests & Documentation",
+                "line_range": "N/A (Absence-based risk)",
+                "call_chain": [],
+                "confidence": 0.99,
+                "responsible_agent": "Work Decomposition Agent",
+                "uncertainty_drivers": []
+            },
+            "risk_flags": [
+                "documentation"
+            ],
+            "suggested_fix": "1. Create an `ARCHITECTURE.md` file in the project root. 2. Document the pattern: Pipeline, Abstract Agents, Dependency Injection of `LLMProvider`. 3. Include a simple component diagram or description of the data flow. 4. Explain the rationale: decoupling, testability, and reliability.",
+            "dependencies": [
+                "T009"
+            ],
+            "subtasks": [],
+            "notes": ""
+        },
+        {
+            "ticket_id": "T011",
+            "title": "Define Development Standards for Testing and Code Contributions",
+            "description": "To sustain the improvements in reliability and sprint planning, clear development standards are required. This task formalizes the expectation for testing and code quality, preventing the re-emergence of the risks identified in the assessment.",
+            "effort_min": 1.0,
+            "effort_max": 2.0,
+            "priority": "Low",
+            "type": "Architecture",
+            "severity": "Low",
+            "confidence_score": 1.0,
+            "confidence_level": "HIGH",
+            "uncertainty_drivers": [],
+            "tags": [],
+            "module": "CONTRIBUTING.md",
+            "evidence": {
+                "file_path": "Project Scope",
+                "symbol": "Tests & Documentation",
+                "line_range": "N/A (Absence-based risk)",
+                "call_chain": [],
+                "confidence": 0.99,
+                "responsible_agent": "Work Decomposition Agent",
+                "uncertainty_drivers": []
+            },
+            "risk_flags": [
+                "documentation"
+            ],
+            "suggested_fix": "1. Create or update a `CONTRIBUTING.md` file. 2. Add a section on the testing policy: 'All new features must be accompanied by unit tests.' 3. Provide a simple guide on how to run tests and add a new test case. 4. Link to the `ARCHITECTURE.md` for design guidelines.",
+            "dependencies": [
+                "T010"
+            ],
+            "subtasks": [],
+            "notes": ""
+        }
+    ],
+    "sprintPlan": [
+        {
+            "day": "Monday",
+            "tickets": [
+                {
+                    "ticket_id": "T001",
+                    "title": "Define `AbstractAgent` Interface to Decouple Pipeline Logic",
+                    "epic": "Epic 1: Decouple Agent Pipeline via Abstraction Layer",
+                    "type": "Architecture",
+                    "severity": "High",
+                    "priority": "Critical",
+                    "description": "The current pipeline directly instantiates and calls agent methods, creating tight coupling. This task introduces a formal `AbstractAgent` interface (or Protocol) to define a contract for all agents. This is the first step in breaking the high coupling that impedes sprint planning and centralizes complexity in `agents.pipeline`.",
+                    "suggested_fix": "1. Create a new file `agents/base.py`. 2. Define an `AbstractAgent` class or `AgentProtocol` with an abstract method like `execute(input_data: dict) -> dict`. 3. This establishes a stable contract that the pipeline can rely on, regardless of the underlying agent implementation.",
+                    "effort_min": 1.0,
+                    "effort_max": 2.0,
+                    "confidence_score": 1.0,
+                    "confidence_level": "HIGH",
+                    "uncertainty_drivers": [],
+                    "labels": [],
+                    "module": "agents.base",
+                    "evidence": {
+                        "file_path": "agents.pipeline",
+                        "symbol": "run_pipeline",
+                        "line_range": "N/A (Module-level risk)",
+                        "call_chain": [],
+                        "confidence": 0.9,
+                        "responsible_agent": "Work Decomposition Agent",
+                        "uncertainty_drivers": []
+                    },
+                    "risk_flags": [
+                        "high-impact",
+                        "deep-dep"
+                    ],
+                    "dependencies": [],
+                    "subtasks": []
+                },
+                {
+                    "ticket_id": "T006",
+                    "title": "Set Up `pytest` Framework and Configure Test Environment",
+                    "epic": "Epic 2: Implement Foundational Quality Assurance",
+                    "type": "Logic",
+                    "severity": "Medium",
+                    "priority": "Critical",
+                    "description": "The complete absence of tests is a latent risk undermining reliability and sprint planning. This foundational task establishes a testing framework (`pytest`) and configures the environment, enabling all subsequent quality assurance efforts. This is a prerequisite for creating a safety net.",
+                    "suggested_fix": "1. Add `pytest` and `pytest-mock` to the project's dependencies. 2. Create a `tests/` directory at the project root. 3. Add a basic `conftest.py` file with common fixtures, such as a mock `LLMProvider`. 4. Configure a CI pipeline step (if applicable) to run tests.",
+                    "effort_min": 1.0,
+                    "effort_max": 2.0,
+                    "confidence_score": 1.0,
+                    "confidence_level": "HIGH",
+                    "uncertainty_drivers": [],
+                    "labels": [],
+                    "module": "tests",
+                    "evidence": {
+                        "file_path": "Project Scope",
+                        "symbol": "Tests & Documentation",
+                        "line_range": "N/A (Absence-based risk)",
+                        "call_chain": [],
+                        "confidence": 0.99,
+                        "responsible_agent": "Work Decomposition Agent",
+                        "uncertainty_drivers": []
+                    },
+                    "risk_flags": [
+                        "foundational"
+                    ],
+                    "dependencies": [],
+                    "subtasks": []
+                }
+            ],
+            "total_hours": 4.0,
+            "feasibility": "Likely fits"
+        },
+        {
+            "day": "Tuesday",
+            "tickets": [
+                {
+                    "ticket_id": "T002",
+                    "title": "Refactor `utils.ollama_client` into an `LLMProvider` Adapter",
+                    "epic": "Epic 1: Decouple Agent Pipeline via Abstraction Layer",
+                    "type": "Architecture",
+                    "severity": "High",
+                    "priority": "Critical",
+                    "description": "The module `utils.ollama_client` is a critical single point of failure. A bug or breaking change here will cascade to all five agents, crippling the application. This task mitigates this risk by replacing the direct dependency with an abstraction layer, allowing for future extensibility and fault isolation.",
+                    "suggested_fix": "1. Create a new module `llm_provider/`. 2. Define an abstract `LLMProvider` interface with a `generate(prompt: str) -> str` method. 3. Create a concrete `OllamaProvider` implementation that wraps the existing logic from `utils.ollama_client`. 4. Agents will now depend on the `LLMProvider` interface, not the concrete `OllamaProvider`.",
+                    "effort_min": 2.0,
+                    "effort_max": 4.0,
+                    "confidence_score": 1.0,
+                    "confidence_level": "HIGH",
+                    "uncertainty_drivers": [],
+                    "labels": [],
+                    "module": "llm_provider.provider",
+                    "evidence": {
+                        "file_path": "utils.ollama_client",
+                        "symbol": "call_ollama",
+                        "line_range": "N/A (Module-level risk)",
+                        "call_chain": [],
+                        "confidence": 0.95,
+                        "responsible_agent": "Work Decomposition Agent",
+                        "uncertainty_drivers": []
+                    },
+                    "risk_flags": [
+                        "high-impact",
+                        "deep-dep",
+                        "refactoring-risk"
+                    ],
+                    "dependencies": [],
+                    "subtasks": []
+                }
+            ],
+            "total_hours": 4.0,
+            "feasibility": "Likely fits"
+        },
+        {
+            "day": "Wednesday",
+            "tickets": [
+                {
+                    "ticket_id": "T003",
+                    "title": "Move Agent-Specific Logic from `utils.prompts` into Respective Agents",
+                    "epic": "Epic 1: Decouple Agent Pipeline via Abstraction Layer",
+                    "type": "Architecture",
+                    "severity": "Medium",
+                    "priority": "High",
+                    "description": "The `utils.prompts` module is another single point of failure and a source of high coupling. Sharing prompts centrally means any change requires checking all five agents. This task improves maintainability and isolates agent behavior by moving prompt management into the agent modules themselves.",
+                    "suggested_fix": "1. For each agent (`brand_agent`, `market_agent`, etc.), move its corresponding prompt templates from `utils.prompts` into a private class variable or a dedicated method within the agent class. 2. Remove the `utils.prompts` module. 3. This encapsulates agent-specific logic, reducing cross-agent dependencies.",
+                    "effort_min": 2.0,
+                    "effort_max": 3.0,
+                    "confidence_score": 1.0,
+                    "confidence_level": "HIGH",
+                    "uncertainty_drivers": [],
+                    "labels": [],
+                    "module": "agents.*",
+                    "evidence": {
+                        "file_path": "utils.prompts",
+                        "symbol": "module",
+                        "line_range": "N/A (Module-level risk)",
+                        "call_chain": [],
+                        "confidence": 0.95,
+                        "responsible_agent": "Work Decomposition Agent",
+                        "uncertainty_drivers": []
+                    },
+                    "risk_flags": [
+                        "high-impact",
+                        "refactoring-risk"
+                    ],
+                    "dependencies": [],
+                    "subtasks": []
+                },
+                {
+                    "ticket_id": "T005",
+                    "title": "Refactor `agents.pipeline` to Manage Abstracted Agents",
+                    "epic": "Epic 1: Decouple Agent Pipeline via Abstraction Layer",
+                    "type": "Architecture",
+                    "severity": "Medium",
+                    "priority": "High",
+                    "description": "The `agents.pipeline` module orchestrates the execution. It must be updated to work with the new, decoupled agent architecture. This finalizes the refactoring and completes the mitigation of the primary coupling and single-point-of-failure risks.",
+                    "suggested_fix": "1. Modify the `run_pipeline` function to instantiate agents using the new constructors, providing them with the `OllamaProvider`. 2. Update the pipeline logic to call the standardized `execute()` method on each agent. 3. Ensure data is passed correctly between agents according to the `execute` contract.",
+                    "effort_min": 2.0,
+                    "effort_max": 3.0,
+                    "confidence_score": 1.0,
+                    "confidence_level": "HIGH",
+                    "uncertainty_drivers": [],
+                    "labels": [],
+                    "module": "agents.pipeline",
+                    "evidence": {
+                        "file_path": "agents.pipeline",
+                        "symbol": "run_pipeline",
+                        "line_range": "N/A (Module-level risk)",
+                        "call_chain": [],
+                        "confidence": 0.9,
+                        "responsible_agent": "Work Decomposition Agent",
+                        "uncertainty_drivers": []
+                    },
+                    "risk_flags": [
+                        "refactoring-risk"
+                    ],
+                    "dependencies": [
+                        "T001",
+                        "T004"
+                    ],
+                    "subtasks": []
+                }
+            ],
+            "total_hours": 6.0,
+            "feasibility": "High risk"
+        },
+        {
+            "day": "Thursday",
+            "tickets": [
+                {
+                    "ticket_id": "T007",
+                    "title": "Write Unit Tests for the `LLMProvider` Abstraction",
+                    "epic": "Epic 2: Implement Foundational Quality Assurance",
+                    "type": "Logic",
+                    "severity": "High",
+                    "priority": "High",
+                    "description": "The new `LLMProvider` is a critical component replacing a single point of failure. It must be thoroughly unit tested to ensure its adapter logic is correct and reliable. This builds confidence in the new architecture and provides a safety net for future changes.",
+                    "suggested_fix": "1. Create `tests/test_llm_provider.py`. 2. Write tests for the `OllamaProvider` implementation. 3. Use mocking to simulate calls to the external Ollama service and verify correct request formatting and response handling. 4. Test error handling and edge cases.",
+                    "effort_min": 2.0,
+                    "effort_max": 4.0,
+                    "confidence_score": 1.0,
+                    "confidence_level": "HIGH",
+                    "uncertainty_drivers": [],
+                    "labels": [],
+                    "module": "tests.test_llm_provider",
+                    "evidence": {
+                        "file_path": "llm_provider.provider",
+                        "symbol": "OllamaProvider",
+                        "line_range": "N/A (New Module)",
+                        "call_chain": [],
+                        "confidence": 0.95,
+                        "responsible_agent": "Work Decomposition Agent",
+                        "uncertainty_drivers": []
+                    },
+                    "risk_flags": [
+                        "high-impact"
+                    ],
+                    "dependencies": [
+                        "T002",
+                        "T006"
+                    ],
+                    "subtasks": []
+                }
+            ],
+            "total_hours": 4.0,
+            "feasibility": "Likely fits"
+        },
+        {
+            "day": "Friday",
+            "tickets": [
+                {
+                    "ticket_id": "T004",
+                    "title": "Update All Agent Implementations to Use New Abstractions",
+                    "epic": "Epic 1: Decouple Agent Pipeline via Abstraction Layer",
+                    "type": "Architecture",
+                    "severity": "High",
+                    "priority": "High",
+                    "description": "This is the implementation step to apply the new architecture. Each of the five agents must be updated to inherit from `AbstractAgent` and use the new `LLMProvider` adapter instead of the old `utils` modules. This directly breaks the tight coupling identified in the assessment.",
+                    "suggested_fix": "1. Update each agent class (`BrandAgent`, `MarketAgent`, etc.) to inherit from `AbstractAgent`. 2. Modify each agent's constructor to accept an `LLMProvider` instance (Dependency Injection). 3. Refactor the agent's core logic to use `provider.generate()` and its own local prompt templates. 4. Implement the required `execute()` method from the interface.",
+                    "effort_min": 3.0,
+                    "effort_max": 5.0,
+                    "confidence_score": 1.0,
+                    "confidence_level": "HIGH",
+                    "uncertainty_drivers": [],
+                    "labels": [],
+                    "module": "agents.brand_agent, agents.market_agent, agents.listing_agent, agents.translator_agent, agents.scoring_agent",
+                    "evidence": {
+                        "file_path": "agents.*",
+                        "symbol": "module",
+                        "line_range": "N/A (Module-level risk)",
+                        "call_chain": [],
+                        "confidence": 0.9,
+                        "responsible_agent": "Work Decomposition Agent",
+                        "uncertainty_drivers": []
+                    },
+                    "risk_flags": [
+                        "high-impact",
+                        "refactoring-risk"
+                    ],
+                    "dependencies": [
+                        "T001",
+                        "T002",
+                        "T003"
+                    ],
+                    "subtasks": []
+                }
+            ],
+            "total_hours": 5.0,
+            "feasibility": "Likely fits"
+        }
+    ],
+    "gap_analysis": "# Structural Integrity Assessment\n\n## Executive Summary\n\nThe project demonstrates a stable and coherent architecture, successfully implementing a pipeline pattern with a clear layered structure (`app` -> `agents` -> `utils`). However, this assessment identifies significant risks that directly impact the stated goals of improving **reliability** and **sprint planning**.\n\nThe primary risk is a high degree of coupling around shared utility modules, creating critical single points of failure. This structural fragility compromises reliability and complicates development planning, as any change to these central modules requires careful regression testing across the entire system. Furthermore, an absence of verifiable quality controls (tests) or architectural documentation represents a latent, unmitigated risk.\n\nThe current structure is a measurable distance from an ideal state where reliability and planning agility are prioritized.\n\n## Risk Findings\n\n### 1. High-Risk: Critical Single Points of Failure in Shared Utilities\n\n- **Finding:** The modules `utils.ollama_client` and `utils.prompts` constitute single points of failure for the entire agent pipeline.\n- **Impact on Goal (Reliability):** A failure, bug, or breaking change in either of these utilities will cascade and halt the execution of all five downstream agents, effectively crippling the entire application's core function.\n- **Structural Evidence:** The graph data shows a `fan_in` (number of callers) of **5** for both `utils.ollama_client` and `utils.prompts`. Every agent (`brand_agent`, `market_agent`, `listing_agent`, `translator_agent`, `scoring_agent`) has a direct, hard dependency on them. This creates a hub-and-spoke model centered on these two utilities.\n- **Quantified Distance from Ideal:** A defensible ideal for reliability would involve isolating agents from each other's implementation details, including their utility dependencies. The current `fan_in` of 5 for these core utilities represents a significant deviation from this ideal. A more robust architecture would aim for a `fan_in` of 1 for a core client, with agents using an abstraction or adapter layer.\n\n### 2. Medium-Risk: High Coupling Impeding Sprint Planning\n\n- **Finding:** Agents are tightly coupled through their shared dependencies on `utils.ollama_client` and `utils.prompts`.\n- **Impact on Goal (Sprint Planning):** This high coupling impedes parallel development. A developer tasked with improving `scoring_agent` cannot do so in isolation, as any change to the shared `ollama_client` or `prompts` to support their work could unintentionally break `brand_agent`, `market_agent`, etc. This necessitates extensive integration testing and cross-team communication, slowing down sprint velocity and increasing planning complexity.\n- **Structural Evidence:** The dependency graph explicitly shows a pattern where `agents.*` modules all converge on the same `utils.*` modules. The orchestration hub, `agents.pipeline`, has a `fan_out` of **5**, meaning it is responsible for managing this tightly coupled set of dependencies, further centralizing the complexity.\n- **Quantified Distance from Ideal:** For effective sprint planning, components should be as loosely coupled as possible. The current structure forces a high coordination overhead. The ideal is to have well-defined interfaces between the pipeline and each agent, allowing teams to work on agents independently. The current dependencies violate this principle.\n\n### 3. Latent Risk: Unjustified Absence of Quality Assurance\n\n- **Finding:** There is a complete absence of evidence for unit tests, integration tests, or architectural documentation within the provided structural data.\n- **Impact on Goal (Reliability & Sprint Planning):** Without tests, the claimed stability is unfounded. There is no safety net to catch regressions when modifying the high-risk single points of failure. This makes refactoring dangerous and sprint planning unpredictable, as the true cost and risk of a change cannot be estimated.\n- **Structural Evidence:** This is a finding based on the rule of **Absence Detection**. The `discovery_data` provides metrics on churn, complexity, and dependencies but contains no metadata on test coverage or documentation links. In a well-governed project, this information would be part of the structural record. Its absence is a risk in itself.\n- **Quantified Distance from Ideal:** A defensible architecture ideal requires that critical components be verifiable. A 0% test coverage (or unknown coverage) for critical modules like `utils.ollama_client` and `agents.pipeline` represents an unacceptable gap from the ideal of a verifiable, reliable system.\n\n## Recommendations for Convergence with Ideal Architecture\n\n1.  **Decouple Agents from Utilities (Reduce `fan_in`):** Introduce an abstraction layer (e.g., an `LLMClient` interface or `PromptProvider` service). Each agent would depend on the abstraction, and `agents.pipeline` would be responsible for injecting the concrete implementation. This breaks the direct dependency and reduces the `fan_in` on the concrete utilities.\n2.  **Implement Comprehensive Testing:** The highest priority is to add unit and integration tests for `utils.ollama_client`, `utils.prompts`, and `agents.pipeline`. This directly mitigates the single point of failure risk and provides the safety net required for reliable sprint planning.\n3.  **Document Data Contracts:** Create simple documentation outlining the expected inputs and outputs for each agent's `run_*` function. This clarifies the boundaries and enables more independent development work.",
+    "summary": "The plan is architecturally sound, prioritizing foundational quality assurance (T006) before major refactoring. However, a critical feasibility issue has been flagged. The high-risk, system-wide refactoring of the `LLMProvider` (T002) is scheduled immediately after establishing the test framework but does not appear to include a dedicated verification step within its scope. This sequence poses a significant risk of introducing destabilizing bugs into a core component without adequate regression testing. While the plan to decouple the system is correct, the proposed execution of T002 is not feasible without a more robust safety net and a larger effort estimate for this irreversible decision.",
+    "performance": {
+        "total_latency": 231554.80027198792,
+        "resolved_path": "C:\\Development\\python\\artisia-mvp",
+        "metrics": {
+            "Internal": 11
+        }
+    }
+}

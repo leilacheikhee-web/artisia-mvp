@@ -79,8 +79,8 @@ with col2:
 
 if st.button("🚀 Generate Listing"):
     with st.spinner("Pipeline running... This may take a moment."):
-        memory = run_pipeline(st.session_state.memory)
-        st.session_state.memory = memory
+        result = run_pipeline(st.session_state.memory)
+        st.session_state.memory = result["memory"]
         
         # Save output
         timestamp = os.popen('date /t').read().strip().replace('/', '-')
