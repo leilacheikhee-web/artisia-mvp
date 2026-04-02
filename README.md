@@ -1,4 +1,4 @@
-<!-- # ARTISIA MVP - AI Artisan Listing Generator
+# ARTISIA MVP - AI Artisan Listing Generator
 
 ARTISIA is an AI-powered system designed to help artisans transform their unique stories and products into globally competitive marketplace listings.
 
@@ -65,4 +65,4 @@ streamlit run app.py
 2. Fill out the four sections of the interview.
 3. Click "Generate Listing".
 4. View the results across the tabs.
-5. The full memory state is visible in the sidebar. -->
+5. The full memory state is visible in the sidebar.
